@@ -13,10 +13,10 @@ import { UserList } from './features/users/UserList'
 import { UserPage } from './features/users/UserPage'
 
 import React from 'react'
+import { NotificationsList } from './features/notifications/NotificationsList'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const username = useAppSelector(selectCurrentUsername)
-
   if (!username) {
     return <Navigate to="/" replace />
   }
@@ -42,6 +42,7 @@ function App() {
                   <Route path="/editPost/:postId" element={<EditPostForm />}></Route>
                   <Route path="/users" element={<UserList />}></Route>
                   <Route path="/users/:userId" element={<UserPage />}></Route>
+                  <Route path="/notifications" element={<NotificationsList />}></Route>
                 </Routes>
               </ProtectedRoute>
             }
