@@ -9,6 +9,9 @@ import { PostsMainPage } from './features/posts/PostsMainPage'
 import { SinglePostPage } from './features/posts/SinglePostPage'
 import { EditPostForm } from './features/posts/EditPostForm'
 import { LoginPage } from './features/auth/LoginPage'
+import { UserList } from './features/users/UserList'
+import { UserPage } from './features/users/UserPage'
+
 import React from 'react'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -37,6 +40,8 @@ function App() {
                   <Route path="/posts" element={<PostsMainPage />}></Route>
                   <Route path="/posts/:postId" element={<SinglePostPage />}></Route>
                   <Route path="/editPost/:postId" element={<EditPostForm />}></Route>
+                  <Route path="/users" element={<UserList />}></Route>
+                  <Route path="/users/:userId" element={<UserPage />}></Route>
                 </Routes>
               </ProtectedRoute>
             }
