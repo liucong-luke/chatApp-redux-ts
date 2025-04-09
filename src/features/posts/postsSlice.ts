@@ -1,10 +1,11 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+import { createEntityAdapter, createSelector, createSlice, EntityState, PayloadAction } from '@reduxjs/toolkit'
 import { nanoid } from '@reduxjs/toolkit'
 import { RootState } from '@/app/store'
 import { sub } from 'date-fns'
 import { logout } from '../auth/authSlice'
 import { client } from '@/api/client'
 import { createAppAsyncThunk } from '@/app/hooks'
+import { AppStartListening } from '@/app/listenerMiddleware'
 
 export interface Reactions {
   thumbsUp: number
@@ -32,8 +33,7 @@ export const addNewPost = createAppAsyncThunk('posts/addNewPost', async (initial
   return response.data
 })
 
-interface PostsState {
-  posts: Post[]
+interface PostsState extends EntityState<Post, string> {
   status: 'idle' | 'pending' | 'succeeded' | 'failed'
   error: string | null
 }
@@ -45,6 +45,11 @@ const initialReactions: Reactions = {
   rocket: 0,
   eyes: 0,
 }
+
+const postsAdapter = createEntityAdapter<Post>({
+  // 排序
+  sortComparer: (a, b) => b.date.localeCompare(a.date),
+})
 
 export const fetchPosts = createAppAsyncThunk(
   'posts/fetchPosts',
@@ -62,11 +67,11 @@ export const fetchPosts = createAppAsyncThunk(
   },
 )
 
-const initialState: PostsState = {
-  posts: [],
+// getInitialState 返回 {ids: [], entities: {}} 对象，然后这里加上我们自定义的字段
+const initialState: PostsState = postsAdapter.getInitialState({
   status: 'idle',
   error: null,
-}
+})
 
 // const initialState: Post[] = [
 //   {
@@ -108,18 +113,20 @@ const postsSlice = createSlice({
     // },
     reactionAdded(state, action: PayloadAction<{ postId: string; reaction: ReactionName }>) {
       const { postId, reaction } = action.payload
-      const existingPost = state.posts.find((post) => post.id === postId)
+      const existingPost = state.entities[postId]
       if (existingPost) {
         existingPost.reactions[reaction]++
       }
     },
     postUpdated(state, action: PayloadAction<PostUpdate>) {
       const { id, title, content } = action.payload
-      const existingPost = state.posts.find((post) => post.id === id)
-      if (existingPost) {
-        existingPost.title = title
-        existingPost.content = content
-      }
+      // 使用 updateOne 方法简化下面注释的代码
+      postsAdapter.updateOne(state, { id, changes: { title, content } })
+      // const existingPost = state.entities[id]
+      // if (existingPost) {
+      //   existingPost.title = title
+      //   existingPost.content = content
+      // }
     },
   },
   extraReducers: (builder) => {
@@ -132,15 +139,14 @@ const postsSlice = createSlice({
       })
       .addCase(fetchPosts.fulfilled, (state, action) => {
         state.status = 'succeeded'
-        state.posts.push(...action.payload)
+        // state.posts.push(...action.payload)
+        postsAdapter.setAll(state, action.payload)
       })
       .addCase(fetchPosts.rejected, (state, action) => {
         state.status = 'failed'
         state.error = action.error.message ?? 'Unknown Error'
       })
-      .addCase(addNewPost.fulfilled, (state, action) => {
-        state.posts.push(action.payload)
-      })
+      .addCase(addNewPost.fulfilled, postsAdapter.addOne)
   },
   // selectors: {
   //   selectAllPosts: (postsState) => postsState,
@@ -156,15 +162,50 @@ export const { /* postAdded, */ postUpdated, reactionAdded } = postsSlice.action
 export default postsSlice.reducer
 
 // 另外一种定义 selector 的方法
-export const selectAllPosts = (state: RootState) => state.posts.posts
+// export const selectAllPosts = (state: RootState) => state.posts.posts
 
-export const selectPostById = (state: RootState, id: string) => state.posts.posts.find((post) => post.id === id)
+// export const selectPostById = (state: RootState, id: string) => state.posts.posts.find((post) => post.id === id)
 
-export const selectPostsByUser = (state: RootState, userId: string) => {
-  const allPosts = selectAllPosts(state)
-  return allPosts.filter((post) => post.user === userId)
-}
+// export const selectPostsByUser = (state: RootState, userId: string) => {
+//   const allPosts = selectAllPosts(state)
+//   return allPosts.filter((post) => post.user === userId)
+// }
+
+// 使用解构的方法重命名getSelectors方法提供的函数(selectAll, selectById, selectIds)
+export const {
+  selectAll: selectAllPosts,
+  selectById: selectPostById,
+  selectIds: selectPostIds,
+} = postsAdapter.getSelectors((state: RootState) => state.posts)
+
+// 性能优化版本
+// 详情看https://redux.js.org/tutorials/essentials/part-6-performance-normalization
+// Memorizing Selector Functions
+export const selectPostsByUser = createSelector(
+  // 这里的输出作为后面的输入
+  [selectAllPosts, (state: RootState, userId: string) => userId],
+  // 这里取前面的输出 selectAllPosts返回posts 后面又返回了userId
+  (posts, userId) => posts.filter((post) => post.user === userId),
+)
 
 export const selectPostsStatus = (state: RootState) => state.posts.status
 
 export const selectPostsError = (state: RootState) => state.posts.error
+
+export const addPostsListeners = (startAppListening: AppStartListening) => {
+  startAppListening({
+    actionCreator: addNewPost.fulfilled,
+    effect: async (action, listenerApi) => {
+      const { toast } = await import('react-tiny-toast')
+
+      const toastId = toast.show('New Post Added!', {
+        variant: 'success',
+        position: 'bottom-right',
+        pause: true,
+      })
+
+      await listenerApi.delay(3000)
+      toast.remove(toastId)
+    },
+  })
+}

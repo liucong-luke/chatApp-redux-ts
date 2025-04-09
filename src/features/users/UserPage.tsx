@@ -6,6 +6,7 @@ import { useAppSelector } from '@/app/hooks'
 export const UserPage = () => {
   const { userId } = useParams()
   const user = useAppSelector((state) => selectUserById(state, userId!))
+
   const postsForUser = useAppSelector((state) => selectPostsByUser(state, userId!))
 
   if (!user) {

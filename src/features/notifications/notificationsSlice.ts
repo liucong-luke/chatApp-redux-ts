@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit'
+import { createEntityAdapter, createSlice } from '@reduxjs/toolkit'
 import { client } from '@/api/client'
 import { createAppAsyncThunk } from '@/app/hooks'
 
@@ -16,7 +16,12 @@ export interface ClientNotification extends ServerNotification {
   read: boolean
 }
 
-const initialState: ClientNotification[] = []
+const notificationAdapter = createEntityAdapter<ClientNotification>({
+  sortComparer: (a, b) => b.date.localeCompare(a.date),
+})
+const initialState = notificationAdapter.getInitialState()
+
+// const initialState: ClientNotification[] = []
 
 export const fetchNotifications = createAppAsyncThunk('notifications/fetchNotifications', async (_unused, thunkApi) => {
   const allNotifications = selectAllNotifications(thunkApi.getState())
@@ -32,7 +37,10 @@ const notificationSlice = createSlice({
   initialState,
   reducers: {
     allNotificationsRead(state) {
-      state.forEach((notification) => {
+      // state.forEach((notification) => {
+      //   notification.read = true
+      // })
+      Object.values(state.entities).forEach((notification) => {
         notification.read = true
       })
     },
@@ -44,19 +52,26 @@ const notificationSlice = createSlice({
         isNew: true,
         read: false,
       }))
-      state.forEach((notification) => {
+      // state.forEach((notification) => {
+      //   notification.isNew = !notification.read
+      // })
+      Object.values(state.entities).forEach((notification) => {
         notification.isNew = !notification.read
       })
-      state.push(...notificationsWithMetadata)
+      // state.push(...notificationsWithMetadata)
+      notificationAdapter.upsertMany(state, notificationsWithMetadata)
       // 以时间排序
-      state.sort((a, b) => b.date.localeCompare(a.date))
+      // state.sort((a, b) => b.date.localeCompare(a.date))
     })
   },
 })
 
 export const { allNotificationsRead } = notificationSlice.actions
 
-export const selectAllNotifications = (state: RootState) => state.notifications
+// export const selectAllNotifications = (state: RootState) => state.notifications
+export const { selectAll: selectAllNotifications } = notificationAdapter.getSelectors(
+  (state: RootState) => state.notifications,
+)
 
 export const selectUnreadNotificationsCount = (state: RootState) => {
   const allNotifications = selectAllNotifications(state)

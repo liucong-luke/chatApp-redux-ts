@@ -1,6 +1,14 @@
 import { useAppSelector, useAppDispatch } from '@/app/hooks'
 import { Link } from 'react-router-dom'
-import { selectAllPosts, fetchPosts, selectPostsStatus, selectPostsError, type Post } from './postsSlice'
+import {
+  selectAllPosts,
+  fetchPosts,
+  selectPostsStatus,
+  selectPostsError,
+  type Post,
+  selectPostIds,
+  selectPostById,
+} from './postsSlice'
 import { PostAuthor } from './PostAuthor'
 import { ReactionButtons } from './ReactionButtons'
 import React, { useEffect } from 'react'
@@ -8,7 +16,12 @@ import React, { useEffect } from 'react'
 import { Spinner } from '@/components/Spinner'
 import { TimeAgo } from '@/components/TimeAgo'
 
-const PostExcerpt = ({ post }: { post: Post }) => {
+interface PostExcerptProps {
+  postId: string
+}
+
+function PostExcerpt({ postId }: PostExcerptProps) {
+  const post = useAppSelector((state) => selectPostById(state, postId))
   return (
     <article className="post-excerpt">
       <h3>
@@ -22,8 +35,12 @@ const PostExcerpt = ({ post }: { post: Post }) => {
   )
 }
 
+// 使用 React.memo 来防止父组件更新时，但是数据没有改变，这个组件也跟着更新
+// PostExcerpt = React.memo(PostExcerpt)
+
 export const PostsList = () => {
   const dispatch = useAppDispatch()
+  const orderedPostIds = useAppSelector(selectPostIds)
   const posts = useAppSelector(selectAllPosts)
   const postsStatus = useAppSelector(selectPostsStatus)
   const postsError = useAppSelector(selectPostsError)
@@ -39,8 +56,9 @@ export const PostsList = () => {
   if (postsStatus === 'pending') {
     content = <Spinner text="Loading..." />
   } else if (postsStatus === 'succeeded') {
-    const orderedPosts = posts.slice().sort((a, b) => b.date.localeCompare(a.date))
-    content = orderedPosts.map((post) => <PostExcerpt post={post} key={post.id} />)
+    // const orderedPosts = posts.slice().sort((a, b) => b.date.localeCompare(a.date))
+    // content = orderedPosts.map((post) => <PostExcerpt postId={post.id} key={post.id} />)
+    content = orderedPostIds.map((postId) => <PostExcerpt key={postId} postId={postId} />)
   } else if (postsStatus === 'failed') {
     content = <div>{postsError}</div>
   }

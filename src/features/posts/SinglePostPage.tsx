@@ -4,11 +4,12 @@ import { PostAuthor } from './PostAuthor'
 import { TimeAgo } from '@/components/TimeAgo'
 import { ReactionButtons } from './ReactionButtons'
 import { selectCurrentUsername } from '../auth/authSlice'
+import { selectPostById } from './postsSlice'
 
 export const SinglePostPage = () => {
   const { postId } = useParams()
 
-  const post = useAppSelector((state) => state.posts.posts.find((post) => post.id === postId))
+  const post = useAppSelector((state) => selectPostById(state, postId!))
   const currentUsername = useAppSelector(selectCurrentUsername)!
 
   if (!post) {
