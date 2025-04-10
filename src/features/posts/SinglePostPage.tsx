@@ -6,10 +6,15 @@ import { ReactionButtons } from './ReactionButtons'
 import { selectCurrentUsername } from '../auth/authSlice'
 import { selectPostById } from './postsSlice'
 
+import { useGetPostQuery } from '@/features/api/apiSlice'
+import { Spinner } from '@/components/Spinner'
+
 export const SinglePostPage = () => {
   const { postId } = useParams()
 
-  const post = useAppSelector((state) => selectPostById(state, postId!))
+  // const post = useAppSelector((state) => selectPostById(state, postId!))
+  const { data: post, isFetching, isSuccess } = useGetPostQuery(postId!)
+
   const currentUsername = useAppSelector(selectCurrentUsername)!
 
   if (!post) {
@@ -22,8 +27,12 @@ export const SinglePostPage = () => {
 
   const canEdit = currentUsername === post.user
 
-  return (
-    <section>
+  let content: React.ReactNode
+
+  if (isFetching) {
+    content = <Spinner text="Loading..." />
+  } else if (isSuccess) {
+    content = (
       <article className="post">
         <h2>{post.title}</h2>
         <PostAuthor userId={post.user} />
@@ -36,6 +45,8 @@ export const SinglePostPage = () => {
           </Link>
         )}
       </article>
-    </section>
-  )
+    )
+  }
+
+  return <section>{content}</section>
 }

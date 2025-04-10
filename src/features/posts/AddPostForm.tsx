@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { addNewPost } from './postsSlice'
 import { selectAllUsers, selectCurrentUser } from '../users/usersSlice'
 import { selectCurrentUsername } from '../auth/authSlice'
+import { useAddNewPostMutation } from '../api/apiSlice'
 
 interface AddPostFormFields extends HTMLFormControlsCollection {
   postTitle: HTMLInputElement
@@ -18,10 +19,13 @@ interface AddPostFormElements extends HTMLFormElement {
 }
 
 export const AddPostForm = () => {
-  const dispatch = useAppDispatch()
+  // const dispatch = useAppDispatch()
   const userId = useAppSelector(selectCurrentUsername)!
+
+  // 这个方法返回一个包含两个值的数组，第一个是触发函数，第二个是触发函数请求后返回的对象
+  const [addNewPost, { isLoading }] = useAddNewPostMutation()
   const users = useAppSelector(selectAllUsers)
-  const [addRequestStatus, setAddRequestStatus] = useState<'idle' | 'pending'>('idle')
+  // const [addRequestStatus, setAddRequestStatus] = useState<'idle' | 'pending'>('idle')
 
   const handleSubmit = async (e: React.FormEvent<AddPostFormElements>) => {
     e.preventDefault()
@@ -38,14 +42,17 @@ export const AddPostForm = () => {
     //   eyes: 0,
     // }
     try {
-      setAddRequestStatus('pending')
-      await dispatch(addNewPost({ title, content, user: userId })).unwrap()
+      // setAddRequestStatus('pending')
+      // await dispatch(addNewPost({ title, content, user: userId })).unwrap()
+      await addNewPost({ title, content, user: userId }).unwrap()
       form.reset()
     } catch (error) {
       console.error('Failed to save the post: ', error)
-    } finally {
-      setAddRequestStatus('idle')
     }
+    // finally {
+    //   setAddRequestStatus('idle')
+    // }
+
     // const userId = elements.postAuthor.value
 
     // const newPost: Post = {
@@ -81,7 +88,8 @@ export const AddPostForm = () => {
         <input type="text" id="postTitle" defaultValue="" required />
         <label htmlFor="postContent">Post Content:</label>
         <textarea name="postContent" id="postContent" defaultValue="" required></textarea>
-        <button disabled={addRequestStatus === 'pending' ? true : false}>Save Post</button>
+        {/* <button disabled={addRequestStatus === 'pending' ? true : false}>Save Post</button> */}
+        <button disabled={isLoading}>Save Post</button>
       </form>
     </section>
   )
