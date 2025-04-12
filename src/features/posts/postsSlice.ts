@@ -6,6 +6,7 @@ import { logout } from '../auth/authSlice'
 import { client } from '@/api/client'
 import { createAppAsyncThunk } from '@/app/hooks'
 import { AppStartListening } from '@/app/listenerMiddleware'
+import { apiSlice } from '../api/apiSlice'
 
 export interface Reactions {
   thumbsUp: number
@@ -25,7 +26,7 @@ export interface Post {
   reactions: Reactions
 }
 
-type PostUpdate = Pick<Post, 'id' | 'title' | 'content'>
+export type PostUpdate = Pick<Post, 'id' | 'title' | 'content'>
 export type NewPost = Pick<Post, 'title' | 'content' | 'user'>
 
 export const addNewPost = createAppAsyncThunk('posts/addNewPost', async (initialPost: NewPost) => {
@@ -194,7 +195,8 @@ export const selectPostsError = (state: RootState) => state.posts.error
 
 export const addPostsListeners = (startAppListening: AppStartListening) => {
   startAppListening({
-    actionCreator: addNewPost.fulfilled,
+    // actionCreator: addNewPost.fulfilled, // 使用matcher来监听
+    matcher: apiSlice.endpoints.addNewPost.matchFulfilled,
     effect: async (action, listenerApi) => {
       const { toast } = await import('react-tiny-toast')
 
